@@ -922,9 +922,15 @@ static int pp_dpm_switch_power_profile(void *handle,
 	return 0;
 }
 
+static uint32_t pp_get_power_overhead(struct pp_hwmgr *hwmgr)
+{
+	return hwmgr->default_power_limit/2;
+}
+
 static int pp_set_power_limit(void *handle, uint32_t limit)
 {
 	struct pp_hwmgr *hwmgr = handle;
+	uint32_t power_limit_overhead;
 
 	if (!hwmgr || !hwmgr->pm_en)
 		return -EINVAL;
@@ -937,7 +943,8 @@ static int pp_set_power_limit(void *handle, uint32_t limit)
 	if (limit == 0)
 		limit = hwmgr->default_power_limit;
 
-	if (limit > hwmgr->default_power_limit)
+	power_limit_overhead = pp_get_power_overhead(hwmgr);
+	if (limit > hwmgr->default_power_limit + power_limit_overhead)
 		return -EINVAL;
 
 	mutex_lock(&hwmgr->smu_lock);
@@ -950,14 +957,17 @@ static int pp_set_power_limit(void *handle, uint32_t limit)
 static int pp_get_power_limit(void *handle, uint32_t *limit, bool default_limit)
 {
 	struct pp_hwmgr *hwmgr = handle;
+	uint32_t power_limit_overhead;
 
 	if (!hwmgr || !hwmgr->pm_en ||!limit)
 		return -EINVAL;
 
 	mutex_lock(&hwmgr->smu_lock);
 
-	if (default_limit)
-		*limit = hwmgr->default_power_limit;
+	if (default_limit) {
+		power_limit_overhead = pp_get_power_overhead(hwmgr);
+		*limit = hwmgr->default_power_limit + power_limit_overhead;
+	}
 	else
 		*limit = hwmgr->power_limit;
 
